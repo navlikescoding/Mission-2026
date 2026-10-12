@@ -1,0 +1,52 @@
+/* Extra styles for the recognizer test page (builds on style.css). */
+
+.result {
+  position: absolute;
+  left: 50%;
+  bottom: 16px;
+  transform: translateX(-50%);
+  min-width: 260px;
+  padding: 12px 20px 14px;
+  border-radius: 14px;
+  background: rgba(10, 12, 16, 0.78);
+  text-align: center;
+  backdrop-filter: blur(6px);
+}
+.result-sign { font-size: 40px; font-weight: 800; line-height: 1.1; }
+.result.none .result-sign { color: var(--muted); font-size: 28px; }
+.result-bar { height: 6px; margin-top: 10px; border-radius: 6px; background: var(--line); overflow: hidden; }
+.result-bar span { display: block; height: 100%; width: 0; background: var(--accent); transition: width 80ms; }
+.result.sent .result-bar span { background: var(--good); }
+.result-meta { margin-top: 6px; color: var(--muted); font-size: 12.5px; font-variant-numeric: tabular-nums; }
+
+.note { margin: 0 0 10px; color: var(--muted); }
+.note b { color: var(--text); }
+.value { float: right; color: var(--muted); font-weight: 400; font-variant-numeric: tabular-nums; }
+input[type="range"] { width: 100%; accent-color: var(--accent); }
+
+.ranked, .events { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.ranked li { display: grid; grid-template-columns: 1fr auto; gap: 3px 8px; }
+.ranked .bar span { background: var(--accent); }
+.ranked li:first-child .bar span { background: var(--good); }
+.ranked .pct { color: var(--muted); font-variant-numeric: tabular-nums; }
+.events li { display: flex; justify-content: space-between; padding: 5px 8px; border-radius: 6px; background: var(--panel-2); }
+.events li.empty { background: none; color: var(--muted); padding: 0; }
+.events .times { color: var(--muted); font-variant-numeric: tabular-nums; }
+
+.eval { margin-top: 16px; }
+.eval button.primary { width: 100%; }
+.eval-summary { margin: 12px 0 8px; font-size: 15px; }
+.eval-summary b { font-size: 22px; }
+.eval table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.eval th, .eval td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--line); }
+.eval th { color: var(--muted); font-weight: 600; }
+.eval td.num { text-align: right; font-variant-numeric: tabular-nums; }
+.eval .low { color: #ffb3b4; }
+.eval .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+@media (max-width: 700px) { .eval .grid2 { grid-template-columns: 1fr; } }
+.eval h3 { margin: 12px 0 6px; font-size: 13px; color: var(--muted); }
+.eval th.num { text-align: right; }
+.ranked.rejected { opacity: 0.45; }
+.ranked.rejected .bar span { background: var(--muted) !important; }
+.result.settling .result-sign { color: var(--text); opacity: 0.7; }
+.result.settling .result-bar span { background: var(--muted); }

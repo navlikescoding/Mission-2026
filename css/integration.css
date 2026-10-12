@@ -1,0 +1,75 @@
+/* Live sign recognition overlay inside the glasses view (added by js/integration.js). */
+
+.teammate-hearing-slot.isl-active {
+  display: block;
+  padding: 0;
+}
+
+/* Hand skeleton, lined up exactly with the mirrored, cropped webcam video */
+.isl-skeleton {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transform: scaleX(-1);
+}
+
+/* Caption at the bottom of the lens, like subtitles in AR glasses */
+.isl-caption {
+  position: absolute;
+  left: 50%;
+  bottom: 34px;
+  transform: translateX(-50%);
+  width: max-content;
+  max-width: 82%;
+  padding: 8px 14px;
+  border-radius: 10px;
+  background: rgba(2, 8, 18, 0.72);
+  border: 1px solid rgba(0, 229, 255, 0.35);
+  text-align: center;
+  backdrop-filter: blur(4px);
+}
+
+.isl-status {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #94a3b8;
+}
+.isl-status.reading { color: var(--accent-yellow); }
+.isl-status.ok { color: var(--accent-emerald); font-weight: 800; font-size: 0.95rem; }
+.isl-status.warn { color: #ffb3b4; }
+
+.isl-phrase {
+  margin-top: 2px;
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: #fff;
+}
+.isl-phrase:empty { display: none; }
+
+.isl-spoken {
+  margin-top: 3px;
+  font-size: 0.8rem;
+  color: var(--accent-cyan);
+}
+.isl-spoken:empty { display: none; }
+
+/* Notices (audio unlock, errors) at the top of the lens */
+.isl-notice {
+  position: absolute;
+  top: 34px;
+  left: 50%;
+  transform: translateX(-50%);
+  max-width: 86%;
+  padding: 5px 12px;
+  border-radius: 8px;
+  background: rgba(255, 213, 79, 0.16);
+  border: 1px solid rgba(255, 213, 79, 0.5);
+  color: #ffd54f;
+  font-size: 0.75rem;
+  text-align: center;
+}
+.isl-notice[hidden] { display: none; }

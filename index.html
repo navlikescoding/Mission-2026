@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AURA-ISL • Two-Way Smart Glasses & Assistive Signer Interface</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/integration.css">
+  <!-- QR Code library for Stretch Goal Phone Sync (via unpkg CDN, with fallback) -->
+  <script src="https://unpkg.com/qrcode-generator@1.4.4/qrcode.js"></script>
+  <!-- PeerJS for zero-server WebRTC phone-to-laptop sync (via unpkg CDN) -->
+  <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+</head>
+<body class="theme-dark">
+
+  <!-- TOP APP BAR -->
+  <header class="app-header">
+    <div class="header-branding">
+      <div class="logo-orb"></div>
+      <div class="brand-text">
+        <h1 class="brand-title">AURA-ISL <span class="badge-hud">HUD v1.0</span></h1>
+        <p class="brand-subtitle">Bidirectional Indian Sign Language Glasses & Display System</p>
+      </div>
+    </div>
+
+    <!-- Quick Status & Demo Tools in Header -->
+    <div class="header-actions">
+      <div class="connection-status" id="webrtc-status-pill" title="Phone Sync Status">
+        <span class="status-dot dot-idle"></span>
+        <span class="status-label" id="sync-status-text">Sync: Standalone</span>
+      </div>
+
+      <button id="btn-phone-sync" class="btn btn-secondary btn-icon" title="Sync Signer View with Mobile Phone">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>
+        <span>Phone View (QR)</span>
+      </button>
+
+      <button id="btn-demo-panel-toggle" class="btn btn-secondary" title="Open Hackathon Simulation / Test Bar">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8"/></svg>
+        <span>Simulate / Test</span>
+      </button>
+
+      <button id="btn-fullscreen" class="btn btn-secondary btn-icon" title="Toggle Fullscreen for Hackathon Projection">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <!-- HACKATHON SIMULATOR DOCK (Collapsible bar for testing without camera/mic) -->
+  <div id="demo-tester-bar" class="demo-tester-bar">
+    <div class="tester-inner">
+      <span class="tester-label">🧪 <strong>Hackathon Test Bar:</strong></span>
+      <span class="tester-desc">Simulate events for team testing:</span>
+      <div class="tester-buttons">
+        <button class="btn btn-sm btn-accent" onclick="testSignerSaid('Namaste, where is the pharmacy?')">
+          Simulate Sign: "Where is pharmacy?"
+        </button>
+        <button class="btn btn-sm btn-accent" onclick="testSignerSaid('I need help with my medicine dosage.')">
+          Simulate Sign: "Medicine dosage"
+        </button>
+        <button class="btn btn-sm btn-accent" onclick="testSignerSaid('Thank you very much!')">
+          Simulate Sign: "Thank you!"
+        </button>
+        <button class="btn btn-sm btn-outline" onclick="testHearingReply('Take this tablet twice a day after food.')">
+          Simulate Voice: "Take tablet twice..."
+        </button>
+      </div>
+      <div class="custom-sim-box">
+        <input type="text" id="custom-signer-input" placeholder="Type custom sign text..." class="tester-input">
+        <button class="btn btn-sm btn-primary" onclick="triggerCustomSignerSaid()">Emit 'signer-said'</button>
+      </div>
+      <button class="btn-close-tester" onclick="toggleTesterBar()" title="Close test bar">×</button>
+    </div>
+  </div>
+
+  <!-- MAIN TWO-PANEL SPLIT SCREEN -->
+  <main class="main-container">
+
+    <!-- ========================================================= -->
+    <!-- LEFT PANEL: HEARING PERSON'S GLASSES VIEW (HUD)          -->
+    <!-- ========================================================= -->
+    <section class="panel panel-hearing" id="glasses-panel" aria-label="Hearing Person Smart Glasses HUD">
+      
+      <!-- Panel Header -->
+      <div class="panel-header">
+        <div class="panel-title-wrap">
+          <span class="view-tag tag-hearing">SMART GLASSES HUD</span>
+          <h2 class="panel-heading">Hearing Person's View (Optic AR)</h2>
+        </div>
+        <div class="hud-status-group">
+          <div class="live-indicator">
+            <span class="live-dot pulse"></span>
+            <span class="live-text">LIVE HUD</span>
+          </div>
+          <span class="hud-stat-pill">60 FPS</span>
+          <span class="hud-stat-pill">ISL-OPTIC v2</span>
+        </div>
+      </div>
+
+      <!-- The Smart Glasses Lens Display Frame -->
+      <div class="glasses-hud-frame">
+        
+        <!-- AR Lens Viewport with Vignette and Reticles -->
+        <div class="lens-viewport">
+          
+          <!-- Webcam Video Feed -->
+          <video id="webcam" autoplay playsinline muted></video>
+          
+          <!-- Fallback Simulated Feed if camera permission is denied -->
+          <div id="webcam-fallback" class="webcam-fallback hidden">
+            <div class="fallback-icon">📷</div>
+            <p><strong>Camera feed inactive</strong></p>
+            <p class="fallback-hint">Click below to retry or load simulated ISL test signer</p>
+            <button id="btn-retry-camera" class="btn btn-sm btn-primary">Enable Camera</button>
+            <button id="btn-mock-feed" class="btn btn-sm btn-outline">Use Mock HUD Loop</button>
+          </div>
+
+          <!-- Futuristic HUD Reticles & Optical Target Brackets -->
+          <div class="hud-overlay-layer">
+            <div class="reticle-corner top-left"></div>
+            <div class="reticle-corner top-right"></div>
+            <div class="reticle-corner bottom-left"></div>
+            <div class="reticle-corner bottom-right"></div>
+
+            <div class="hud-telemetry top-bar">
+              <span class="hud-metric">BAT: 84% ⚡</span>
+              <span class="hud-metric">FOV: 110°</span>
+              <span class="hud-metric">TRACK: HANDS + FACE</span>
+            </div>
+
+            <div class="hud-crosshair">
+              <div class="crosshair-center"></div>
+              <div class="crosshair-line h-line"></div>
+              <div class="crosshair-line v-line"></div>
+            </div>
+
+            <div class="hud-target-box">
+              <span class="target-label">SIGN ZONE ACTIVE</span>
+            </div>
+
+            <!-- Speech Audio Waveform Visualizer for Hearing Person -->
+            <div class="hud-audio-waveform" id="hud-audio-bars">
+              <span class="bar"></span><span class="bar"></span><span class="bar"></span>
+              <span class="bar"></span><span class="bar"></span><span class="bar"></span>
+              <span class="bar"></span><span class="bar"></span>
+            </div>
+          </div>
+
+          <!-- REQUIRED BY SPEC: Empty div that teammate will fill with their ISL signs module -->
+          <div id="hearing-panel" class="teammate-hearing-slot">
+            <!-- Teammates can inject gesture landmarks canvas, bounding boxes, or sign predictions here -->
+            <div class="slot-watermark">
+              <span>[ #hearing-panel: Teammate ISL Vision / Output Slot ]</span>
+            </div>
+          </div>
+
+        </div> <!-- /lens-viewport -->
+
+        <!-- CAMERA QUICK CONTROLS -->
+        <div class="camera-bar">
+          <button id="btn-toggle-cam" class="btn btn-xs btn-outline" title="Turn camera on/off">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
+            <span>Toggle Cam</span>
+          </button>
+          <span class="camera-hint">Lens simulates Google/Meta AR Glasses frame</span>
+          <!-- Audio Readout Toggle for Signer signs -->
+          <label class="tts-toggle-wrap" title="Smart Glasses Earphone Audio: Read signer's translated signs aloud to the hearing person">
+            <input type="checkbox" id="tts-audio-toggle" checked>
+            <span class="tts-label">🔊 Glasses Audio (TTS for Signer signs)</span>
+          </label>
+        </div>
+
+      </div> <!-- /glasses-hud-frame -->
+
+      <!-- ======================================================= -->
+      <!-- SPEECH-TO-TEXT CONTROLS FOR THE HEARING PERSON           -->
+      <!-- ======================================================= -->
+      <div class="speech-controls-card">
+        
+        <div class="speech-card-header">
+          <div class="speech-title-wrap">
+            <h3 class="speech-title">Hearing Person's Speech Reply</h3>
+            <span class="speech-desc">Speaks into glasses mic → Becomes large text for Signer</span>
+          </div>
+
+          <!-- Language Selector: English (India), Hindi, Tamil -->
+          <div class="language-picker-wrap">
+            <label for="language-select" class="picker-label">Language:</label>
+            <select id="language-select" class="dropdown-lang">
+              <option value="en-IN" selected>English (India) [en-IN]</option>
+              <option value="hi-IN">Hindi (हिंदी) [hi-IN]</option>
+              <option value="ta-IN">Tamil (தமிழ்) [ta-IN]</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Browser Support Banner (Warning if unsupported) -->
+        <div id="speech-unsupported-alert" class="alert-banner alert-warning hidden">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+          <div>
+            <strong>Web Speech API Not Detected:</strong> Your browser does not support live speech recognition.
+            Please open this demo in <strong>Google Chrome</strong> or <strong>Microsoft Edge</strong> for speech features.
+          </div>
+        </div>
+
+        <!-- Live Interim / Final Speech Display -->
+        <div class="speech-display-box" id="speech-preview-box">
+          <div class="speech-status-strip">
+            <span class="mic-status-badge" id="mic-status-label">Mic Inactive</span>
+            <span class="speech-mode-indicator" id="speech-mode-indicator">Mode: Push-to-Talk</span>
+          </div>
+          <p class="interim-text" id="interim-transcript-display">Press and hold Push-to-Talk or enable Continuous Listening...</p>
+        </div>
+
+        <!-- Push-To-Talk and Continuous Listening Controls -->
+        <div class="speech-actions-row">
+          
+          <!-- BIG Push-To-Talk Button -->
+          <button id="btn-push-to-talk" class="btn-ptt" title="Click or Press & Hold to speak">
+            <div class="ptt-icon-wrap">
+              <svg class="mic-icon" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
+            </div>
+            <div class="ptt-text-group">
+              <span class="ptt-main-text" id="ptt-btn-label">PUSH TO TALK</span>
+              <span class="ptt-sub-text">Hold or Click to Speak</span>
+            </div>
+          </button>
+
+          <!-- Continuous Listening Toggle -->
+          <div class="continuous-toggle-box">
+            <label class="switch-control">
+              <input type="checkbox" id="toggle-continuous">
+              <span class="slider round"></span>
+            </label>
+            <div class="toggle-text">
+              <strong>Continuous Listening</strong>
+              <small>Auto-restarts when speech pauses</small>
+            </div>
+          </div>
+
+        </div>
+
+      </div> <!-- /speech-controls-card -->
+
+    </section>
+
+    <!-- ========================================================= -->
+    <!-- RIGHT PANEL: SIGNER'S VIEW (HIGH CONTRAST ASSISTIVE)      -->
+    <!-- ========================================================= -->
+    <section class="panel panel-signer" id="signer-panel" aria-label="Deaf Signer Large-Text Interface">
+      
+      <!-- Panel Header -->
+      <div class="panel-header">
+        <div class="panel-title-wrap">
+          <span class="view-tag tag-signer">SIGNER'S DISPLAY</span>
+          <h2 class="panel-heading">Signer's View (Assistive Screen)</h2>
+        </div>
+        <div class="signer-tools-group">
+          <button id="btn-clear-history" class="btn btn-xs btn-outline" title="Clear conversation history">Clear Log</button>
+          <button id="btn-font-larger" class="btn btn-xs btn-outline" title="Enlarge text size for distant viewing">A+</button>
+          <button id="btn-font-normal" class="btn btn-xs btn-outline" title="Reset text size">A-</button>
+        </div>
+      </div>
+
+      <!-- SECTION 2.1: HUGE HIGH-CONTRAST LATEST SPOKEN REPLY CARD -->
+      <div class="latest-reply-container">
+        <div class="latest-reply-header">
+          <div class="reply-badge-group">
+            <span class="badge-speaker-hearing">HEARING PERSON'S LATEST REPLY</span>
+            <span class="live-pulse-dot" id="reply-pulse-indicator"></span>
+          </div>
+          <span class="reply-timestamp" id="latest-reply-time">Awaiting reply...</span>
+        </div>
+
+        <div class="latest-reply-card" id="latest-reply-card">
+          <div class="reply-text-wrapper">
+            <!-- Very large, high-contrast text -->
+            <p class="latest-reply-text" id="latest-reply-text">
+              "Press the mic on the left to speak a reply..."
+            </p>
+          </div>
+          <div class="reply-card-footer">
+            <span class="reply-lang-tag" id="latest-reply-lang">Language: en-IN</span>
+            <span class="reply-hint">Visible across the room or on phone</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- SECTION 2.2: SCROLLING CONVERSATION HISTORY -->
+      <div class="history-container">
+        <div class="history-header">
+          <h3 class="history-title">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+            Conversation History
+          </h3>
+          <span class="history-count" id="history-count-badge">0 messages</span>
+        </div>
+
+        <!-- Scrolling Chat Log -->
+        <div class="conversation-feed" id="conversation-feed" tabindex="0" aria-live="polite">
+          
+          <!-- Welcoming Guide Message -->
+          <div class="history-welcome-card" id="history-welcome">
+            <div class="welcome-icon">🤟 ⇄ 🗣️</div>
+            <h4>Two-Way Dialogue Ready</h4>
+            <p>Spoken words from the hearing person appear in <strong>Cyan</strong>.<br>
+            Recognized signs from the signer appear in <strong>Emerald Green</strong>.</p>
+          </div>
+
+        </div> <!-- /conversation-feed -->
+
+      </div> <!-- /history-container -->
+
+    </section>
+
+  </main>
+
+  <!-- ========================================================= -->
+  <!-- MODAL: STRETCH GOAL PHONE SYNC QR CODE & INSTRUCTIONS     -->
+  <!-- ========================================================= -->
+  <div id="modal-phone-sync" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="modal-sync-title">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 id="modal-sync-title" class="modal-title">📱 Open Signer's View on Phone</h3>
+        <button class="btn-close-modal" id="btn-close-sync-modal" aria-label="Close modal">×</button>
+      </div>
+      
+      <div class="modal-body">
+        <p class="modal-desc">
+          Scan this QR code with any smartphone on the same Wi-Fi. The phone will open the Signer's high-contrast display and sync in real time via WebRTC peer connection (zero server needed)!
+        </p>
+
+        <div class="qr-container">
+          <div id="qrcode-canvas" class="qrcode-box">
+            <!-- QR code generated here via sync.js -->
+            <div class="qr-loading">Generating QR code...</div>
+          </div>
+        </div>
+
+        <div class="sync-link-box">
+          <label class="input-label" for="sync-host-input">Laptop Wi-Fi IP / Host (e.g. 192.168.1.5:8000):</label>
+          <div class="input-with-copy">
+            <input type="text" id="sync-host-input" class="text-input-copy" placeholder="192.168.x.x:8000">
+            <button id="btn-update-qr" class="btn btn-sm btn-accent">Update QR</button>
+          </div>
+        </div>
+
+        <div class="sync-link-box">
+          <label class="input-label" for="sync-url-input">Direct Mobile URL:</label>
+          <div class="input-with-copy">
+            <input type="text" id="sync-url-input" readonly class="text-input-copy" value="">
+            <button id="btn-copy-sync-url" class="btn btn-sm btn-primary">Copy</button>
+          </div>
+        </div>
+
+        <div class="sync-info-pills">
+          <div class="info-pill">
+            <span class="info-tag">Room / Peer ID:</span>
+            <code id="sync-peer-id-display">Generating...</code>
+          </div>
+          <div class="info-pill">
+            <span class="info-tag">Mode:</span>
+            <span>WebRTC DataChannel (P2P)</span>
+          </div>
+        </div>
+
+        <div class="sync-hackathon-tip">
+          💡 <strong>Hackathon Tip:</strong> If hosting locally on laptop, make sure phone is on the same Wi-Fi and use your laptop's local IP (e.g. <code>http://192.168.1.5:8080/mobile.html</code>).
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button id="btn-test-sync-ping" class="btn btn-sm btn-outline">Send Test Ping to Phone</button>
+        <button class="btn btn-sm btn-secondary" onclick="document.getElementById('modal-phone-sync').classList.add('hidden')">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODULAR SCRIPTS (One per component as specified) -->
+  <script src="js/webcam.js"></script>
+  <script src="js/speech.js"></script>
+  <script src="js/signer.js"></script>
+  <script src="js/sync.js"></script>
+  <script src="js/mock-test.js"></script>
+
+  <!-- Sign → sentence → speech (Member 3) -->
+  <script src="/hearing-side/signToSpeech.js"></script>
+  <!-- Connects Member 4's camera to the sign recognizer (Member 1) and shows it in the glasses view -->
+  <script type="module" src="js/integration.js"></script>
+
+</body>
+</html>

@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Sign Recorder</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header>
+    <h1>Sign Recorder</h1>
+    <nav><a href="record.html" class="current">1. Record</a><a href="recognize.html">2. Recognize</a></nav>
+    <div class="pills">
+      <span class="pill" id="modelPill">Model: <b>loading…</b></span>
+      <span class="pill" id="handsPill">Hands: <b>0</b></span>
+      <span class="pill" id="fpsPill">FPS: <b>–</b></span>
+    </div>
+  </header>
+
+  <main>
+    <section>
+      <div class="stage" id="stage">
+        <video id="video" playsinline muted></video>
+        <canvas id="canvas"></canvas>
+        <div class="banner" id="banner"></div>
+        <div class="overlay" id="countdown"></div>
+        <div class="warn" id="warn"></div>
+      </div>
+      <p class="hint">
+        <kbd>Enter</kbd> or the yellow button: 3-second countdown, then records for 3 seconds (best for two-handed signs).
+        Hold <kbd>Space</kbd> to record while held. <kbd>↑</kbd> <kbd>↓</kbd> change sign.
+        For each sign, press <kbd>Enter</kbd> about 3 times, lowering your hand and signing again between each
+        (a bit closer, further, or turned). Separate attempts teach the model far more than one long recording.
+      </p>
+    </section>
+
+    <aside>
+      <div class="card">
+        <h2>Recording</h2>
+        <label class="field">Your name
+          <input type="text" id="recorder" placeholder="e.g. Navaneeth" autocomplete="off">
+        </label>
+        <label class="field">Sign
+          <select id="signSelect"></select>
+        </label>
+        <div class="buttons">
+          <button class="primary" id="recordBtn" disabled>Record 3 seconds (Enter)</button>
+          <button id="undoBtn">Undo last 10</button>
+          <button id="clearBtn" class="danger">Clear this sign</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Samples</h2>
+        <ul class="signs" id="signList"></ul>
+        <p class="total">Total: <b id="total">0</b> samples · saved in this browser automatically</p>
+      </div>
+
+      <div class="card">
+        <h2>Files</h2>
+        <div class="buttons">
+          <button id="exportBtn">Export JSON</button>
+          <button id="importBtn">Import JSON</button>
+          <button id="resetBtn" class="danger" style="grid-column: 1 / -1">Delete all samples</button>
+        </div>
+        <input type="file" id="importFile" accept=".json,application/json" multiple>
+      </div>
+    </aside>
+  </main>
+
+  <script type="module" src="record.js"></script>
+</body>
+</html>

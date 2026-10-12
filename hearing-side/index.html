@@ -1,0 +1,422 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SignBridge | Two-Way ISL Communication</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main class="app">
+    <header class="hero">
+      <div class="brand">
+        <div class="brand-icon" aria-hidden="true">SB</div>
+        <div>
+          <p class="eyebrow">ACCESSIBLE COMMUNICATION</p>
+          <h1>SignBridge</h1>
+        </div>
+      </div>
+      <p class="subtitle">
+        ISL signs to spoken English, designed for hands-free conversation.
+      </p>
+      <div class="device-note">
+        <span class="status-dot"></span>
+        <span>Browser prototype · Webcam-ready integration</span>
+      </div>
+    </header>
+
+    <section class="main-grid">
+      <div class="panel detection-panel">
+        <div class="panel-heading">
+          <div>
+            <p class="eyebrow">LIVE RECOGNITION</p>
+            <h2>Detected sign</h2>
+          </div>
+          <span id="detection-state" class="state-pill no-hand">
+            Waiting
+          </span>
+        </div>
+
+        <div class="sign-display">
+          <p class="field-label">CURRENT SIGN</p>
+          <h3 id="current-sign" aria-live="polite">Waiting for a sign</h3>
+          <p class="muted">A sign appears here when the recognizer detects it.</p>
+        </div>
+
+        <div class="metrics">
+          <div class="metric">
+            <span class="field-label">CONFIDENCE</span>
+            <strong id="confidence">—</strong>
+          </div>
+          <div class="metric">
+            <span class="field-label">STABILITY</span>
+            <strong id="stability">0 ms</strong>
+          </div>
+        </div>
+
+        <div class="phrase-box">
+          <p class="field-label">PHRASE IN PROGRESS</p>
+          <p id="phrase-preview" class="phrase-text" aria-live="polite">
+            Waiting for signs...
+          </p>
+          <p class="muted small">
+            A sentence is prepared 2 seconds after you stop signing.
+          </p>
+        </div>
+      </div>
+
+      <div class="panel speech-panel">
+        <p class="eyebrow">AUDIO OUTPUT</p>
+        <h2>Speech output</h2>
+        <p class="muted">
+          Sentences are spoken aloud through your computer or connected earbuds.
+        </p>
+
+        <button id="enable-audio" class="primary-button" type="button">
+          Enable / Test Speech
+        </button>
+
+        <p id="audio-note" class="audio-note" role="status" aria-live="polite">
+          Press the button once to test audio before your demo.
+        </p>
+
+        <div class="divider"></div>
+
+        <p class="field-label">HOW IT WORKS</p>
+        <div class="process-step">
+          <span class="step-number">1</span>
+          <span>Recognize a sign</span>
+        </div>
+        <div class="process-step">
+          <span class="step-number">2</span>
+          <span>Build an English sentence</span>
+        </div>
+        <div class="process-step">
+          <span class="step-number">3</span>
+          <span>Speak and share the sentence</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel camera-panel">
+      <div class="panel-heading">
+        <div>
+          <p class="eyebrow">LIVE CAMERA</p>
+          <h2>Sign with the webcam</h2>
+        </div>
+        <button id="start-camera" class="secondary-button" type="button">Start camera</button>
+      </div>
+      <p id="camera-note" class="muted small">
+        Uses the recognizer in /recognition with /recognition/data/samples.json.
+        Starting the camera also enables speech.
+      </p>
+      <div class="camera-stage" hidden>
+        <video id="camera-video" playsinline muted></video>
+        <canvas id="camera-canvas"></canvas>
+      </div>
+    </section>
+
+    <section class="panel test-panel">
+      <div class="panel-heading">
+        <div>
+          <p class="eyebrow">DEVELOPMENT MODE</p>
+          <h2>Test without a camera</h2>
+        </div>
+        <span class="test-badge">TEST MODE</span>
+      </div>
+
+      <p class="muted">
+        Click a sign to simulate a one-second recognition stream, or hold its
+        keyboard shortcut to simulate continuous detection.
+      </p>
+
+      <div class="test-buttons">
+        <button type="button" class="sign-button" data-sign="medicine">Medicine <kbd>M</kbd></button>
+        <button type="button" class="sign-button" data-sign="fever">Fever <kbd>F</kbd></button>
+        <button type="button" class="sign-button" data-sign="thank you">Thank you <kbd>T</kbd></button>
+        <button type="button" class="sign-button" data-sign="how much">How much <kbd>H</kbd></button>
+        <button type="button" class="sign-button" data-sign="water">Water <kbd>W</kbd></button>
+        <button type="button" class="sign-button" data-sign="doctor">Doctor <kbd>D</kbd></button>
+        <button type="button" class="sign-button" data-sign="help">Help <kbd>L</kbd></button>
+        <button type="button" class="sign-button" data-sign="pain">Pain <kbd>P</kbd></button>
+        <button type="button" class="sign-button" data-sign="yes">Yes <kbd>Y</kbd></button>
+        <button type="button" class="sign-button" data-sign="no">No <kbd>N</kbd></button>
+        <button type="button" class="sign-button" data-sign="headache">Headache <kbd>E</kbd></button>
+        <button type="button" class="sign-button" data-sign="again">Again <kbd>A</kbd></button>
+      </div>
+
+      <p class="muted small">
+        Clicked tests use confidence 0.92. Keyboard shortcuts are active
+        when this page has focus and you're not typing in a text field.
+      </p>
+    </section>
+
+    <section class="panel history-panel">
+      <div class="panel-heading">
+        <div>
+          <p class="eyebrow">CONVERSATION</p>
+          <h2>Spoken sentence history</h2>
+        </div>
+        <button id="clear-history" class="secondary-button" type="button">
+          Clear history
+        </button>
+      </div>
+
+      <p class="muted">
+        Sentences appear here after speech synthesis reports that speaking has finished.
+      </p>
+
+      <ol id="history-list" class="history-list" aria-live="polite">
+        <li class="history-empty">
+          No spoken sentences yet. Start a sign test to begin.
+        </li>
+      </ol>
+      <p id="history-count" class="history-count">0 sentences spoken</p>
+    </section>
+
+    <footer>
+      <p>SignBridge · Hackathon prototype · Built for Indian Sign Language</p>
+    </footer>
+  </main>
+
+  <script src="signToSpeech.js"></script>
+  <script>
+    const currentSign = document.getElementById("current-sign");
+    const detectionState = document.getElementById("detection-state");
+    const confidence = document.getElementById("confidence");
+    const stability = document.getElementById("stability");
+    const phrasePreview = document.getElementById("phrase-preview");
+    const audioNote = document.getElementById("audio-note");
+    const historyList = document.getElementById("history-list");
+    const historyCount = document.getElementById("history-count");
+
+    let spokenCount = 0;
+    let activeInterval = null;
+    let activeStopTimer = null;
+    let heldKey = null;
+
+    const keyboardSigns = {
+      m: "medicine",
+      f: "fever",
+      t: "thank you",
+      h: "how much",
+      w: "water",
+      d: "doctor",
+      l: "help",
+      p: "pain",
+      y: "yes",
+      n: "no",
+      e: "headache",
+      a: "again"
+    };
+
+    function sendFakeSign(sign) {
+      window.dispatchEvent(new CustomEvent("sign", {
+        detail: {
+          sign: sign,
+          confidence: 0.92
+        }
+      }));
+    }
+
+    function stopSimulation() {
+      clearInterval(activeInterval);
+      clearTimeout(activeStopTimer);
+      activeInterval = null;
+      activeStopTimer = null;
+      heldKey = null;
+    }
+
+    function startTimedSimulation(sign) {
+      stopSimulation();
+      sendFakeSign(sign);
+
+      activeInterval = setInterval(() => {
+        sendFakeSign(sign);
+      }, 50);
+
+      activeStopTimer = setTimeout(() => {
+        clearInterval(activeInterval);
+        activeInterval = null;
+        activeStopTimer = null;
+      }, 1000);
+    }
+
+    function startHeldSimulation(sign, key) {
+      stopSimulation();
+      heldKey = key;
+      sendFakeSign(sign);
+
+      activeInterval = setInterval(() => {
+        sendFakeSign(sign);
+      }, 50);
+    }
+
+    document.querySelectorAll("[data-sign]").forEach(button => {
+      button.addEventListener("click", () => {
+        startTimedSimulation(button.dataset.sign);
+      });
+    });
+
+    document.addEventListener("keydown", event => {
+      const key = event.key.toLowerCase();
+      const tag = document.activeElement?.tagName;
+
+      if (
+        event.repeat ||
+        event.ctrlKey ||
+        event.altKey ||
+        event.metaKey ||
+        tag === "INPUT" ||
+        tag === "TEXTAREA" ||
+        document.activeElement?.isContentEditable ||
+        !(key in keyboardSigns)
+      ) {
+        return;
+      }
+
+      event.preventDefault();
+      startHeldSimulation(keyboardSigns[key], key);
+    });
+
+    document.addEventListener("keyup", event => {
+      if (heldKey === event.key.toLowerCase()) {
+        stopSimulation();
+      }
+    });
+
+    window.addEventListener("blur", stopSimulation);
+
+    window.addEventListener("sign-status", event => {
+      const data = event.detail;
+
+      currentSign.textContent = data.sign || "No hand detected";
+
+      const readableStates = {
+        "stabilizing": "Stabilizing",
+        "accepted": "Accepted",
+        "held": "Sign held",
+        "low-confidence": "Low confidence",
+        "no-hand": "Waiting"
+      };
+
+      detectionState.textContent =
+        readableStates[data.state] || data.state || "Waiting";
+
+      detectionState.className =
+        "state-pill " + (data.state || "no-hand");
+
+      confidence.textContent =
+        Number.isFinite(data.confidence)
+          ? `${(data.confidence * 100).toFixed(0)}%`
+          : "—";
+
+      stability.textContent =
+        `${data.stableForMs || 0} ms`;
+    });
+
+    window.addEventListener("phrase-update", event => {
+      const signs = event.detail.signs;
+
+      phrasePreview.textContent = signs.length
+        ? signs.join(" + ")
+        : "Waiting for signs...";
+    });
+
+    window.addEventListener("speech-start", event => {
+      audioNote.textContent = `Speaking: ${event.detail.text}`;
+    });
+
+    window.addEventListener("signer-said", event => {
+      const text = event.detail?.text;
+
+      if (typeof text !== "string" || !text.trim()) return;
+
+      const emptyMessage = historyList.querySelector(".history-empty");
+      if (emptyMessage) emptyMessage.remove();
+
+      const item = document.createElement("li");
+      item.className = "history-item";
+
+      const sentence = document.createElement("p");
+      sentence.className = "history-sentence";
+      sentence.textContent = text;
+
+      const time = document.createElement("time");
+      time.className = "history-time";
+      time.textContent = new Date().toLocaleTimeString([], {
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit"
+      });
+
+      item.append(sentence, time);
+      historyList.prepend(item);
+
+      spokenCount++;
+      historyCount.textContent =
+        `${spokenCount} sentence${spokenCount === 1 ? "" : "s"} spoken`;
+
+      audioNote.textContent = "Last sentence spoken successfully.";
+    });
+
+    window.addEventListener("speech-error", event => {
+      audioNote.textContent =
+        `Speech error: ${event.detail.error}. Check browser audio support.`;
+    });
+
+    document.getElementById("enable-audio").addEventListener("click", () => {
+      if (!window.SignBridgeSpeech) {
+        audioNote.textContent = "Speech module not loaded. Check signToSpeech.js.";
+        return;
+      }
+
+      window.SignBridgeSpeech.enable();
+      audioNote.textContent = "Speech test requested. Check your speakers or earbuds.";
+    });
+
+    document.getElementById("clear-history").addEventListener("click", () => {
+      historyList.replaceChildren();
+
+      const emptyMessage = document.createElement("li");
+      emptyMessage.className = "history-empty";
+      emptyMessage.textContent = "No spoken sentences yet. Start a sign test to begin.";
+
+      historyList.appendChild(emptyMessage);
+      spokenCount = 0;
+      historyCount.textContent = "0 sentences spoken";
+    });
+  </script>
+  <script type="module">
+    // Live camera: plugs the recognizer (Member 1) into this page.
+    import { startRecognizer } from "/recognition/recognizer.js";
+
+    const button = document.getElementById("start-camera");
+    const note = document.getElementById("camera-note");
+    const stage = document.querySelector(".camera-stage");
+
+    button.addEventListener("click", async () => {
+      button.disabled = true;
+      button.textContent = "Starting…";
+      // The click also unlocks speech, which Chrome only allows after a user action.
+      window.SignBridgeSpeech?.enable();
+      try {
+        stage.hidden = false;
+        await startRecognizer(document.getElementById("camera-video"), {
+          samplesUrl: "/recognition/data/samples.json",
+          canvas: document.getElementById("camera-canvas")
+        });
+        button.textContent = "Camera on";
+        note.textContent = "Sign and hold still. Accepted signs build a sentence, spoken 2 seconds after you stop.";
+      } catch (err) {
+        console.error(err);
+        stage.hidden = true;
+        button.disabled = false;
+        button.textContent = "Start camera";
+        note.textContent = `Couldn't start: ${err.message || err}`;
+      }
+    });
+  </script>
+</body>
+</html>

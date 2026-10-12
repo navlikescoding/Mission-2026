@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Sign Recognizer</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="recognize.css">
+</head>
+<body>
+  <header>
+    <h1>Sign Recognizer</h1>
+    <nav><a href="record.html">1. Record</a><a href="recognize.html" class="current">2. Recognize</a></nav>
+    <div class="pills">
+      <span class="pill" id="modelPill">Model: <b>waiting…</b></span>
+      <span class="pill" id="dataPill">Samples: <b>–</b></span>
+      <span class="pill" id="fpsPill">FPS: <b>–</b></span>
+    </div>
+  </header>
+
+  <main>
+    <section>
+      <div class="stage">
+        <video id="video" playsinline muted></video>
+        <canvas id="canvas"></canvas>
+        <div class="result" id="result">
+          <div class="result-sign" id="resultSign">No hand</div>
+          <div class="result-bar"><span id="resultBar"></span></div>
+          <div class="result-meta" id="resultMeta"></div>
+        </div>
+      </div>
+      <p class="hint">
+        Show a sign you recorded and hold it still: the label shows "Moving…" while your hand moves, fills its
+        bar while you hold, then turns green when the sign is sent. <b>Events sent</b> shows exactly what
+        teammates' code receives. If it says "Moving…" while you're holding still, raise <b>Movement allowed</b>. If random hand positions get recognized as signs, lower
+        <b>Match tolerance</b>; if real signs keep showing "No sign", raise it.
+      </p>
+
+      <div class="card eval">
+        <h2>Accuracy check</h2>
+        <button id="evalBtn" class="primary">Test accuracy on the recorded samples</button>
+        <div id="evalOut"></div>
+      </div>
+    </section>
+
+    <aside>
+      <div class="card">
+        <h2>Training data</h2>
+        <p class="note" id="dataNote">Loading…</p>
+        <div class="buttons">
+          <button id="useSavedBtn">Use samples saved in this browser</button>
+          <button id="useFileBtn">Use data/samples.json</button>
+          <button id="loadFileBtn" style="grid-column: 1 / -1">Load a JSON file…</button>
+        </div>
+        <input type="file" id="fileInput" accept=".json,application/json" multiple hidden>
+      </div>
+
+      <div class="card">
+        <h2>Tuning</h2>
+        <label class="field">Match tolerance <span class="value" id="thresholdValue"></span>
+          <input type="range" id="threshold" min="0.4" max="2.5" step="0.05" value="1">
+        </label>
+        <label class="field">Minimum confidence to send <span class="value" id="confValue"></span>
+          <input type="range" id="minConf" min="0.4" max="1" step="0.05" value="0.6">
+        </label>
+        <label class="field">Movement allowed <span class="value" id="motionValue"></span>
+          <input type="range" id="motionLimit" min="0.4" max="3" step="0.1" value="1.2">
+        </label>
+        <label class="field">Hold time before sending <span class="value" id="holdValue"></span>
+          <input type="range" id="holdMs" min="100" max="800" step="50" value="300">
+        </label>
+        <label class="field">Neighbours compared (k)
+          <select id="kSelect">
+            <option value="3">3</option>
+            <option value="5" selected>5</option>
+            <option value="7">7</option>
+          </select>
+        </label>
+      </div>
+
+      <div class="card">
+        <h2 id="rankedTitle">Top guesses</h2>
+        <ul class="ranked" id="ranked"></ul>
+      </div>
+
+      <div class="card">
+        <h2>Events sent</h2>
+        <ul class="events" id="events"><li class="empty">None yet</li></ul>
+      </div>
+    </aside>
+  </main>
+
+  <script type="module" src="recognize.js"></script>
+</body>
+</html>

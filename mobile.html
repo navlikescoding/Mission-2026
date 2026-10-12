@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>AURA-ISL • Mobile Signer Display</title>
+  <link rel="stylesheet" href="css/style.css">
+  <!-- PeerJS for WebRTC connection to laptop -->
+  <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+  <style>
+    /* Mobile-specific adjustments for phone screen */
+    body {
+      background: #060a12;
+      padding: 0;
+      margin: 0;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      height: 100dvh;
+      overflow: hidden;
+    }
+
+    .mobile-header {
+      background: #0f172a;
+      padding: 12px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid rgba(0, 245, 155, 0.3);
+      flex-shrink: 0;
+    }
+
+    .mobile-title {
+      font-size: 1rem;
+      font-weight: 800;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .connection-pill {
+      font-size: 0.72rem;
+      font-family: var(--font-mono);
+      padding: 4px 10px;
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.08);
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .mobile-content {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      padding: 12px;
+      gap: 12px;
+      overflow-y: auto;
+    }
+
+    .mobile-latest-card {
+      background: #131d2e;
+      border: 2px solid var(--accent-yellow);
+      border-radius: var(--radius-md);
+      padding: 18px 16px;
+      box-shadow: 0 4px 20px rgba(255, 230, 0, 0.15);
+      flex-shrink: 0;
+    }
+
+    .mobile-latest-title {
+      font-size: 0.7rem;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      color: var(--accent-cyan);
+      margin-bottom: 8px;
+      display: flex;
+      justify-content: space-between;
+    }
+
+    .mobile-latest-text {
+      font-size: 2.2rem;
+      font-weight: 900;
+      line-height: 1.25;
+      color: #fffa65;
+      word-break: break-word;
+    }
+
+    .mobile-history-box {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      background: #090e18;
+      border: var(--border-subtle);
+      border-radius: var(--radius-md);
+      padding: 10px;
+      min-height: 180px;
+      overflow: hidden;
+    }
+
+    .mobile-feed {
+      flex: 1;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .mobile-input-dock {
+      background: #0f172a;
+      border-top: 1px solid rgba(255, 255, 255, 0.1);
+      padding: 10px 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      flex-shrink: 0;
+    }
+
+    .quick-chips-row {
+      display: flex;
+      gap: 6px;
+      overflow-x: auto;
+      padding-bottom: 4px;
+    }
+
+    .chip-btn {
+      background: rgba(0, 245, 155, 0.15);
+      border: 1px solid rgba(0, 245, 155, 0.3);
+      color: var(--accent-emerald);
+      border-radius: 14px;
+      padding: 5px 12px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      white-space: nowrap;
+      cursor: pointer;
+    }
+
+    .chip-btn:active {
+      background: var(--accent-emerald);
+      color: #000;
+    }
+
+    .mobile-type-row {
+      display: flex;
+      gap: 6px;
+    }
+
+    .mobile-text-input {
+      flex: 1;
+      background: #090e18;
+      border: var(--border-subtle);
+      border-radius: var(--radius-sm);
+      color: #fff;
+      padding: 8px 12px;
+      font-size: 0.9rem;
+    }
+
+    .mobile-text-input:focus {
+      outline: none;
+      border-color: var(--accent-emerald);
+    }
+  </style>
+</head>
+<body>
+
+  <!-- MOBILE HEADER -->
+  <header class="mobile-header">
+    <div class="mobile-title">
+      <span>🤟 AURA-ISL</span>
+      <span class="badge-hud">Signer Phone</span>
+    </div>
+    <div class="connection-pill" id="mobile-conn-pill">
+      <span class="status-dot dot-idle" id="mobile-dot"></span>
+      <span id="mobile-status-text">Connecting...</span>
+    </div>
+  </header>
+
+  <!-- MAIN SCROLLABLE CONTENT -->
+  <main class="mobile-content">
+    
+    <!-- LATEST SPOKEN MESSAGE (ULTRA LARGE HIGH CONTRAST) -->
+    <div class="mobile-latest-card" id="mobile-latest-card">
+      <div class="mobile-latest-title">
+        <span>SPOKEN BY HEARING PERSON</span>
+        <span id="mobile-reply-time">Live</span>
+      </div>
+      <div class="mobile-latest-text" id="mobile-latest-text">
+        "Waiting for speech..."
+      </div>
+    </div>
+
+    <!-- CONVERSATION HISTORY -->
+    <div class="mobile-history-box">
+      <div class="history-header">
+        <span class="history-title">Chat Log</span>
+        <span class="history-count" id="mobile-count">0 messages</span>
+      </div>
+      <div class="mobile-feed" id="mobile-feed">
+        <!-- Messages populate here -->
+      </div>
+    </div>
+
+  </main>
+
+  <!-- MOBILE INPUT DOCK (Signer Quick Phrases) -->
+  <footer class="mobile-input-dock">
+    <div class="quick-chips-row">
+      <button class="chip-btn" onclick="sendSignerResponse('Yes, I understand.')">Yes</button>
+      <button class="chip-btn" onclick="sendSignerResponse('No, please repeat.')">No</button>
+      <button class="chip-btn" onclick="sendSignerResponse('Where is the doctor?')">Where is doctor?</button>
+      <button class="chip-btn" onclick="sendSignerResponse('Thank you very much.')">Thank you</button>
+      <button class="chip-btn" onclick="sendSignerResponse('How many days?')">How many days?</button>
+    </div>
+
+    <div class="mobile-type-row">
+      <input type="text" id="mobile-input" class="mobile-text-input" placeholder="Type message to glasses...">
+      <button class="btn btn-primary" onclick="sendCustomMessage()">Send</button>
+    </div>
+  </footer>
+
+  <script>
+    // URL Params to find target laptop Peer ID
+    const urlParams = new URLSearchParams(window.location.search);
+    const targetHostPeer = urlParams.get('peer');
+
+    const statusText = document.getElementById('mobile-status-text');
+    const statusDot = document.getElementById('mobile-dot');
+    const latestText = document.getElementById('mobile-latest-text');
+    const latestTime = document.getElementById('mobile-reply-time');
+    const latestCard = document.getElementById('mobile-latest-card');
+    const mobileFeed = document.getElementById('mobile-feed');
+    const mobileCount = document.getElementById('mobile-count');
+    const mobileInput = document.getElementById('mobile-input');
+
+    let conn = null;
+    let messageCount = 0;
+
+    // Connect BroadcastChannel for same-device tabs
+    let bc = null;
+    try {
+      bc = new BroadcastChannel('aura-isl-sync');
+      bc.onmessage = (e) => handleData(e.data);
+    } catch (_) {}
+
+    // Initialize PeerJS Client
+    if (typeof Peer !== 'undefined' && targetHostPeer) {
+      statusText.textContent = `Connecting to ${targetHostPeer}...`;
+      const peer = new Peer();
+
+      peer.on('open', () => {
+        conn = peer.connect(targetHostPeer);
+
+        conn.on('open', () => {
+          statusText.textContent = 'Synced to Glasses';
+          statusDot.className = 'status-dot dot-sync';
+          console.log('Connected to laptop glasses HUD!');
+        });
+
+        conn.on('data', (data) => {
+          handleData(data);
+        });
+
+        conn.on('close', () => {
+          statusText.textContent = 'Disconnected';
+          statusDot.className = 'status-dot dot-idle';
+        });
+
+        conn.on('error', (err) => {
+          console.warn('Connection error:', err);
+        });
+      });
+
+      peer.on('error', (err) => {
+        statusText.textContent = 'P2P Offline';
+        console.warn('Peer error:', err);
+      });
+    } else {
+      statusText.textContent = 'Multi-tab Mode';
+      statusDot.className = 'status-dot dot-active';
+    }
+
+    function handleData(data) {
+      if (!data) return;
+
+      if (data.type === 'init-sync' && data.latestReply) {
+        latestText.textContent = `"${data.latestReply}"`;
+      } else if (data.type === 'reply') {
+        // Spoken reply from hearing person
+        latestText.textContent = `"${data.text}"`;
+        latestTime.textContent = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        
+        latestCard.classList.remove('glow-update');
+        void latestCard.offsetWidth;
+        latestCard.classList.add('glow-update');
+
+        appendBubble('hearing', 'Hearing Person (Voice)', data.text);
+      } else if (data.type === 'signer-said') {
+        appendBubble('signer', 'ISL Signer (Signed)', data.text);
+      }
+    }
+
+    function appendBubble(sender, label, text) {
+      const bubble = document.createElement('div');
+      bubble.className = `message-bubble bubble-${sender}`;
+      bubble.innerHTML = `
+        <div class="bubble-meta">
+          <span class="bubble-sender">${label}</span>
+          <span class="bubble-time">${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+        </div>
+        <div class="bubble-text">${text}</div>
+      `;
+      mobileFeed.appendChild(bubble);
+      messageCount++;
+      mobileCount.textContent = `${messageCount} messages`;
+      mobileFeed.scrollTop = mobileFeed.scrollHeight;
+    }
+
+    function sendSignerResponse(text) {
+      if (!text) return;
+
+      appendBubble('signer', 'Me (Phone)', text);
+
+      const payload = { type: 'signer-said', text };
+      if (conn && conn.open) conn.send(payload);
+      if (bc) bc.postMessage(payload);
+    }
+
+    function sendCustomMessage() {
+      const text = mobileInput.value.trim();
+      if (!text) return;
+      sendSignerResponse(text);
+      mobileInput.value = '';
+    }
+
+    mobileInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') sendCustomMessage();
+    });
+  </script>
+</body>
+</html>
